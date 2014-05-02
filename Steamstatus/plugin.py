@@ -28,7 +28,6 @@
 
 ###
 import json
-import urllib2
 import datetime
 
 import supybot.utils as utils
@@ -39,28 +38,31 @@ import supybot.callbacks as callbacks
 
 class Steamstatus(callbacks.Plugin):
     """Just type in 'steam' as command and have fun."""
+
     threaded = True
 
+    url = "http://steamstat.us/status.json"
+    services = { "Community": "community",
+                 "Store": "store",
+                 "Client": "steam",
+                 "CS:Go": "csgo_community" }
+
+    def fetch(self):
+        return json.loads(utils.web.getUrl(self.url))
+
     def steam(self, irc, msg, args):
-        """takes no  argument
+        """takes no  arguments
 
         Returns steams status fetched from steamstat.us
         """
 
-        page = urllib2.urlopen("http://steamstat.us/status.json")
-        status = json.loads(page.read())
-
-        services = { "Community": "community",
-                     "Store": "store",
-                     "Client": "steam",
-                     "CS:Go": "csgo_community" }
-
+        status = self.fetch()
         response = "Steamstatus: "
 
-        if len(services) < 1:
+        if len(self.services) < 1:
             irc.error("No services defined.", True)
 
-        for (name, key) in services.items():
+        for (name, key) in self.services.items():
             service = status["services"][key]
             response += ircutils.bold(name + ": ")
             response += ircutils.mircColor(service["title"], "green" if service["status"] == "good" else ("orange" if service["status"] == "minor" else "red"))
