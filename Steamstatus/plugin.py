@@ -30,6 +30,8 @@
 import json
 import datetime
 
+import relativedates
+
 import supybot.utils as utils
 from supybot.commands import *
 import supybot.plugins as plugins
@@ -45,7 +47,8 @@ class Steamstatus(callbacks.Plugin):
     services = { "Community": "community",
                  "Store": "store",
                  "Client": "steam",
-                 "CS:Go": "csgo_community" }
+                 "CS:Go": "csgo",
+                 "CS:Go Community": "csgo_community" }
 
     def fetch(self):
         return json.loads(utils.web.getUrl(self.url))
@@ -68,7 +71,7 @@ class Steamstatus(callbacks.Plugin):
             response += ircutils.mircColor(service["title"], "green" if service["status"] == "good" else ("orange" if service["status"] == "minor" else "red"))
 
             if "time" in service:
-                response += " (" + datetime.datetime.fromtimestamp(int(service["time"])).strftime("%Y-%m-%d %H:%M:%S") + ")"
+                response += " (since " + relativedates.timesince(datetime.datetime.fromtimestamp(int(service["time"]))) + ")"
 
             response += ", "
 
