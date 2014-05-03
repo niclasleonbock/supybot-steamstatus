@@ -29,9 +29,9 @@
 ###
 
 import json
-import datetime
 
-import relativedates
+from steamservice import Steamservice
+from steamservice import create_service
 
 import supybot.utils as utils
 from supybot.commands import *
@@ -40,7 +40,7 @@ import supybot.ircutils as ircutils
 import supybot.callbacks as callbacks
 
 class Steamstatus(callbacks.Plugin):
-    """Just type in 'steam' as command and have fun."""
+    """Just type in 'steam' or 'steamservice' as command and have fun."""
 
     threaded = True
 
@@ -59,25 +59,8 @@ class Steamstatus(callbacks.Plugin):
 
         return status
 
-    def formathealth(self, service):
-        return ircutils.mircColor(service["title"], "green" if service["status"] == "good" else ("orange" if service["status"] == "minor" else "red"))
-
-    def formatname(self, name):
-        return ircutils.bold(name)
-
-    def formattime(self, service):
-        return "since " + relativedates.timesince(datetime.datetime.fromtimestamp(int(service["time"])))
-
-    def formatservice(self, service, name):
-        response = self.formatname(name) + ": " + self.formathealth(service)
-
-        if "time" in service:
-            response += " (" + self.formattime(service) + ")"
-
-        return response
-
     def steamservice(self, irc, msg, args):
-        """<service key>
+        """takes no or one argument(s) <service key>
 
         Returns status of specified steam service fetched from steamstat.us
         """
@@ -91,12 +74,12 @@ class Steamstatus(callbacks.Plugin):
 
         try:
             service = status["services"][key]
-            irc.reply("Status of service " + self.formatservice(service, key))
+            irc.reply("Status of service " + str(create_service(key, key, service)))
         except KeyError:
             irc.error("Status of service " + key + " is (temporarily) not available.")
 
     def steam(self, irc, msg, args):
-        """takes no arguments
+        """takes no or one argument(s) <service key>
 
         Returns steams status fetched from steamstat.us
         """
@@ -117,7 +100,8 @@ class Steamstatus(callbacks.Plugin):
         for (name, key) in self.services.items():
             try:
                 service = status["services"][key]
-                response += self.formatservice(service, name) + ", "
+                # name, key, status, health, time=None
+                response += str(create_service(key, name, service)) + ", "
             except KeyError:
                 irc.error("Status of service " + name + " (" + key + ") is (temporarily) not available.")
 
