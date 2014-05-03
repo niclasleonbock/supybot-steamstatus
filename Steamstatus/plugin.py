@@ -45,7 +45,8 @@ class Steamstatus(callbacks.Plugin):
     threaded = True
 
     url = "http://steamstat.us/status.json"
-    services = { "Community": "community",
+    services = { "Onlinecount": "online",
+                 "Community": "community",
                  "Store": "store",
                  "Client": "steam",
                  "CS:GO": "csgo",
@@ -58,6 +59,20 @@ class Steamstatus(callbacks.Plugin):
             raise Exception("Services are not available. Seems like I received a malformed response from steamstat.us.")
 
         return status
+
+    def steamservices(self, irc, msg, args):
+        """takes no arguments
+
+        Returns a list of all available steam services fetched from steamstat.us
+        """
+
+        status = self.fetch()
+        response = "Available services: "
+
+        for key in status["services"]:
+            response += key + ", "
+
+        irc.reply(response[:-2])
 
     def steamservice(self, irc, msg, args):
         """takes no or one argument(s) <service key>
@@ -97,7 +112,7 @@ class Steamstatus(callbacks.Plugin):
         if len(self.services) < 1:
             irc.error("No services defined.", True)
 
-        for (name, key) in self.services.items():
+        for (name, key) in sorted(self.services.items()):
             try:
                 service = status["services"][key]
                 # name, key, status, health, time=None
