@@ -27,6 +27,7 @@
 # POSSIBILITY OF SUCH DAMAGE.
 
 ###
+
 import json
 import datetime
 
@@ -47,33 +48,78 @@ class Steamstatus(callbacks.Plugin):
     services = { "Community": "community",
                  "Store": "store",
                  "Client": "steam",
-                 "CS:Go": "csgo",
-                 "CS:Go Community": "csgo_community" }
+                 "CS:GO": "csgo",
+                 "CS:GO Community": "csgo_community" }
 
     def fetch(self):
-        return json.loads(utils.web.getUrl(self.url))
+        status = json.loads(utils.web.getUrl(self.url))
+
+        if not "services" in status:
+            raise Exception("Services are not available. Seems like I received a malformed response from steamstat.us.")
+
+        return status
+
+    def formathealth(self, service):
+        return ircutils.mircColor(service["title"], "green" if service["status"] == "good" else ("orange" if service["status"] == "minor" else "red"))
+
+    def formatname(self, name):
+        return ircutils.bold(name)
+
+    def formattime(self, service):
+        return "since " + relativedates.timesince(datetime.datetime.fromtimestamp(int(service["time"])))
+
+    def formatservice(self, service, name):
+        response = self.formatname(name) + ": " + self.formathealth(service)
+
+        if "time" in service:
+            response += " (" + self.formattime(service) + ")"
+
+        return response
+
+    def steamservice(self, irc, msg, args):
+        """<service key>
+
+        Returns status of specified steam service fetched from steamstat.us
+        """
+
+        status = self.fetch()
+
+        if not len(args):
+            return self.steam(irc, msg, args)
+        else:
+            key = args[0]
+
+        try:
+            service = status["services"][key]
+            irc.reply("Status of service " + self.formatservice(service, key))
+        except KeyError:
+            irc.error("Status of service " + key + " is (temporarily) not available.")
 
     def steam(self, irc, msg, args):
-        """takes no  arguments
+        """takes no arguments
 
         Returns steams status fetched from steamstat.us
         """
 
-        status = self.fetch()
+        if len(args):
+            return self.steamservice(irc, msg, args)
+
+        try:
+            status = self.fetch()
+        except Exception as e:
+            irc.error(e, True)
+
         response = "Steamstatus: "
 
         if len(self.services) < 1:
             irc.error("No services defined.", True)
 
         for (name, key) in self.services.items():
-            service = status["services"][key]
-            response += ircutils.bold(name + ": ")
-            response += ircutils.mircColor(service["title"], "green" if service["status"] == "good" else ("orange" if service["status"] == "minor" else "red"))
-
-            if "time" in service:
-                response += " (since " + relativedates.timesince(datetime.datetime.fromtimestamp(int(service["time"]))) + ")"
-
-            response += ", "
+            try:
+                service = status["services"][key]
+                response += self.formatservice(service, name) + ", "
+            except KeyError:
+                irc.error("Status of service " + name + " (" + key + ") is (temporarily) not available.")
 
         irc.reply(response[:-2])
 
