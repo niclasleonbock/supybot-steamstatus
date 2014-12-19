@@ -44,7 +44,7 @@ class Steamstatus(callbacks.Plugin):
 
     threaded = True
 
-    url = "http://steamstat.us/status.json"
+    url = "https://steamdb.info/api/SteamRailgun/"
     services = { "Onlinecount": "online",
                  "Community": "community",
                  "Store": "store",
